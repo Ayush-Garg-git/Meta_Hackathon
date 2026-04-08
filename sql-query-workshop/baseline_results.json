@@ -1,0 +1,284 @@
+{
+  "scores": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "attempts": [
+    3,
+    2,
+    2,
+    1,
+    1
+  ],
+  "cumulative_reward": 5.0,
+  "normalized_score": 1.0,
+  "episode_log": [
+    {
+      "task_id": "task_01_syntax_fix",
+      "attempt": 1,
+      "query": "SELECT id name email country FROM customers WHERE country = 'US' AND tier = gold",
+      "reward": 0.0,
+      "info": {
+        "task_id": "task_01_syntax_fix",
+        "level": "easy",
+        "attempt": 1,
+        "score_this_attempt": 0.0,
+        "best_score_this_task": 0.0,
+        "delta_from_best": 0.0,
+        "is_improvement": false,
+        "is_regression": false,
+        "task_solved": false,
+        "advanced_to_next_task": false,
+        "attempts_remaining": 2
+      }
+    },
+    {
+      "task_id": "task_01_syntax_fix",
+      "attempt": 2,
+      "query": "SELECT id, name, email, country FROM customers WHERE country = 'US' AND tier = gold",
+      "reward": 0.0,
+      "info": {
+        "task_id": "task_01_syntax_fix",
+        "level": "easy",
+        "attempt": 2,
+        "score_this_attempt": 0.0,
+        "best_score_this_task": 0.0,
+        "delta_from_best": 0.0,
+        "is_improvement": false,
+        "is_regression": false,
+        "task_solved": false,
+        "advanced_to_next_task": false,
+        "attempts_remaining": 1
+      }
+    },
+    {
+      "task_id": "task_01_syntax_fix",
+      "attempt": 3,
+      "query": "SELECT id, name, email, country FROM customers WHERE country = 'US' AND tier = 'gold'",
+      "reward": 1.0,
+      "info": {
+        "task_id": "task_01_syntax_fix",
+        "level": "easy",
+        "attempt": 3,
+        "score_this_attempt": 1.0,
+        "best_score_this_task": 1.0,
+        "delta_from_best": 1.0,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": true,
+        "advanced_to_next_task": true,
+        "attempts_remaining": 0
+      }
+    },
+    {
+      "task_id": "task_02_join_logic",
+      "attempt": 1,
+      "query": "SELECT c.name, c.email, o.id AS order_id, o.status FROM customers c LEFT JOIN orders o ON c.id = o.customer_id WHERE o.status = 'active'",
+      "reward": 0.7,
+      "info": {
+        "task_id": "task_02_join_logic",
+        "level": "medium",
+        "attempt": 1,
+        "score_this_attempt": 0.7,
+        "best_score_this_task": 0.7,
+        "delta_from_best": 0.7,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": false,
+        "advanced_to_next_task": false,
+        "attempts_remaining": 2
+      }
+    },
+    {
+      "task_id": "task_02_join_logic",
+      "attempt": 2,
+      "query": "SELECT c.name, c.email, o.id AS order_id, o.status FROM customers c INNER JOIN orders o ON c.id = o.customer_id WHERE o.status = 'active' ORDER BY c.name ASC",
+      "reward": 1.0,
+      "info": {
+        "task_id": "task_02_join_logic",
+        "level": "medium",
+        "attempt": 2,
+        "score_this_attempt": 1.0,
+        "best_score_this_task": 1.0,
+        "delta_from_best": 0.3,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": true,
+        "advanced_to_next_task": true,
+        "attempts_remaining": 0
+      }
+    },
+    {
+      "task_id": "task_03_aggregation_fix",
+      "attempt": 1,
+      "query": "SELECT c.name, COUNT(o.id) AS order_count, SUM(oi.quantity * oi.unit_price) AS revenue FROM customers c JOIN orders o ON c.id = o.customer_id JOIN order_items oi ON o.id = oi.order_id WHERE o.status = 'completed' HAVING revenue > 100",
+      "reward": 0.4,
+      "info": {
+        "task_id": "task_03_aggregation_fix",
+        "level": "medium",
+        "attempt": 1,
+        "score_this_attempt": 0.4,
+        "best_score_this_task": 0.4,
+        "delta_from_best": 0.4,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": false,
+        "advanced_to_next_task": false,
+        "attempts_remaining": 2
+      }
+    },
+    {
+      "task_id": "task_03_aggregation_fix",
+      "attempt": 2,
+      "query": "SELECT c.name, COUNT(o.id) AS order_count, SUM(oi.quantity * oi.unit_price) AS revenue FROM customers c JOIN orders o ON c.id = o.customer_id JOIN order_items oi ON o.id = oi.order_id WHERE o.status = 'completed' GROUP BY c.id, c.name HAVING revenue > 100 ORDER BY revenue DESC",
+      "reward": 1.0,
+      "info": {
+        "task_id": "task_03_aggregation_fix",
+        "level": "medium",
+        "attempt": 2,
+        "score_this_attempt": 1.0,
+        "best_score_this_task": 1.0,
+        "delta_from_best": 0.6,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": true,
+        "advanced_to_next_task": true,
+        "attempts_remaining": 0
+      }
+    },
+    {
+      "task_id": "task_04_correlated_subquery",
+      "attempt": 1,
+      "query": "SELECT c.id, c.name, c.email, SUM(oi.quantity * oi.unit_price) AS total_spent FROM customers c INNER JOIN orders o ON c.id = o.customer_id INNER JOIN order_items oi ON o.id = oi.order_id WHERE o.status = 'completed' GROUP BY c.id, c.name, c.email HAVING SUM(oi.quantity * oi.unit_price) > 200 ORDER BY total_spent DESC",
+      "reward": 1.0,
+      "info": {
+        "task_id": "task_04_correlated_subquery",
+        "level": "hard",
+        "attempt": 1,
+        "score_this_attempt": 1.0,
+        "best_score_this_task": 1.0,
+        "delta_from_best": 1.0,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": true,
+        "advanced_to_next_task": true,
+        "attempts_remaining": 0
+      }
+    },
+    {
+      "task_id": "task_05_multi_table_report",
+      "attempt": 1,
+      "query": "SELECT p.category, SUM(oi.quantity * oi.unit_price) AS total_revenue FROM order_items oi INNER JOIN orders o ON oi.order_id = o.id INNER JOIN products p ON oi.product_id = p.id WHERE o.status = 'completed' GROUP BY p.category ORDER BY total_revenue DESC",
+      "reward": 1.0,
+      "info": {
+        "task_id": "task_05_multi_table_report",
+        "level": "hard",
+        "attempt": 1,
+        "score_this_attempt": 1.0,
+        "best_score_this_task": 1.0,
+        "delta_from_best": 1.0,
+        "is_improvement": true,
+        "is_regression": false,
+        "task_solved": true,
+        "advanced_to_next_task": true,
+        "attempts_remaining": 0,
+        "final_scores": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "total_reward": 5.0,
+        "normalized_score": 1.0,
+        "message": "All tasks complete. Episode finished."
+      }
+    }
+  ],
+  "progression_log": [
+    {
+      "task_id": "task_01_syntax_fix",
+      "attempt": 1,
+      "score": 0.0,
+      "prev_best": 0.0,
+      "delta": 0.0,
+      "is_improvement": false,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_01_syntax_fix",
+      "attempt": 2,
+      "score": 0.0,
+      "prev_best": 0.0,
+      "delta": 0.0,
+      "is_improvement": false,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_01_syntax_fix",
+      "attempt": 3,
+      "score": 1.0,
+      "prev_best": 0.0,
+      "delta": 1.0,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_02_join_logic",
+      "attempt": 1,
+      "score": 0.7,
+      "prev_best": 0.0,
+      "delta": 0.7,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_02_join_logic",
+      "attempt": 2,
+      "score": 1.0,
+      "prev_best": 0.7,
+      "delta": 0.3,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_03_aggregation_fix",
+      "attempt": 1,
+      "score": 0.4,
+      "prev_best": 0.0,
+      "delta": 0.4,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_03_aggregation_fix",
+      "attempt": 2,
+      "score": 1.0,
+      "prev_best": 0.4,
+      "delta": 0.6,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_04_correlated_subquery",
+      "attempt": 1,
+      "score": 1.0,
+      "prev_best": 0.0,
+      "delta": 1.0,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    {
+      "task_id": "task_05_multi_table_report",
+      "attempt": 1,
+      "score": 1.0,
+      "prev_best": 0.0,
+      "delta": 1.0,
+      "is_improvement": true,
+      "is_regression": false
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenEnv - SQL Query Workshop Benchmark</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f111a',
+                        panel: '#1a1d27',
+                        accent: '#4fc3f7',
+                        success: '#81c784',
+                        error: '#e57373',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f111a; color: #e0e0e0; font-family: 'Inter', sans-serif; }
+        .monaco-container { height: 350px; width: 100%; border: 1px solid #333; border-radius: 0.5rem; overflow:hidden;}
+        .log-panel { max-height: 480px; overflow-y: auto; font-family: monospace; }
+        .rubric-item { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 0.25rem 0; border-bottom: 1px solid #333;}
+        .rubric-pass { color: #81c784; }
+        .rubric-fail { color: #e57373; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f111a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+    <!-- Navbar -->
+    <header class="bg-panel border-b border-gray-800 p-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold text-accent">SQL Query Workshop</h1>
+            <p class="text-xs text-gray-400 mt-1">OpenEnv v2 Benchmark Environment</p>
+        </div>
+        <div class="flex gap-4">
+            <button id="btn-reset" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-sm transition font-semibold">Start / Reset Episode</button>
+            <button id="btn-docs" class="px-4 py-2 border border-accent text-accent hover:bg-accent/10 rounded text-sm transition">API Docs</button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar: ERD & Tasks -->
+        <div class="w-1/3 bg-panel border-r border-gray-800 p-4 flex flex-col gap-4 overflow-y-auto">
+            <div>
+                <h2 class="text-sm font-bold tracking-wider text-gray-400 uppercase mb-2">Schema Representation</h2>
+                <div class="bg-darkbg p-2 rounded border border-gray-800 text-xs text-center">
+                    <pre class="mermaid bg-transparent mx-auto">
+                        erDiagram
+                            CUSTOMERS ||--o{ ORDERS : places
+                            ORDERS ||--|{ ORDER_ITEMS : contains
+                            PRODUCTS ||--o{ ORDER_ITEMS : included_in
+                            CUSTOMERS ||--o{ REVIEWS : writes
+                            PRODUCTS ||--o{ REVIEWS : receives
+                    </pre>
+                </div>
+            </div>
+            
+            <div class="flex-1">
+                <h2 class="text-sm font-bold tracking-wider text-gray-400 uppercase mb-2">Current Objective</h2>
+                <div id="task-container" class="bg-darkbg p-4 rounded border border-gray-800 text-sm hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <span id="task-id" class="font-bold text-accent"></span>
+                        <span id="task-level" class="text-xs px-2 py-1 bg-gray-800 rounded"></span>
+                    </div>
+                    <p id="task-instructions" class="text-gray-300 italic mb-4"></p>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Attempt: <span id="task-attempt" class="text-white"></span> / <span id="task-max"></span></span>
+                        <span>Multi-step Best: <span id="task-score" class="text-white"></span></span>
+                    </div>
+                </div>
+                <div id="no-task" class="text-gray-500 text-sm italic text-center p-8">
+                    Awaiting initialization. Click "Start / Reset Episode" to inject task parameters.
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="w-2/3 flex flex-col">
+            <!-- Editor -->
+            <div class="p-4 border-b border-gray-800 bg-darkbg">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-sm font-bold tracking-wider text-gray-400 uppercase">Agent Trajectory Input</h2>
+                    <button id="btn-execute" disabled class="px-6 py-1.5 bg-accent text-darkbg hover:bg-opacity-90 rounded font-bold shadow disabled:opacity-50 disabled:cursor-not-allowed">Execute Step</button>
+                </div>
+                <div id="editor" class="monaco-container"></div>
+            </div>
+
+            <!-- Feedback Console -->
+            <div class="flex-1 p-4 bg-panel overflow-hidden flex flex-col">
+                <h2 class="text-sm font-bold tracking-wider text-gray-400 uppercase mb-2">Evaluation Feedback Console</h2>
+                <div id="log-output" class="log-panel flex-1 bg-darkbg p-4 rounded border border-gray-800 text-sm text-gray-300">
+                    <div class="text-gray-500 italic">> Event framework initialized. Ready for episode dispatch.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
+    <script>
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            window.editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '-- Injecting OpenEnv framework hooks...',
+                language: 'sql',
+                theme: 'vs-dark',
+                minimap: { enabled: false },
+                fontSize: 14,
+                padding: { top: 16 }
+            });
+        });
+
+        const els = {
+            btnReset: document.getElementById('btn-reset'),
+            btnDocs: document.getElementById('btn-docs'),
+            btnExecute: document.getElementById('btn-execute'),
+            taskContainer: document.getElementById('task-container'),
+            noTask: document.getElementById('no-task'),
+            taskId: document.getElementById('task-id'),
+            taskLevel: document.getElementById('task-level'),
+            taskInstructions: document.getElementById('task-instructions'),
+            taskAttempt: document.getElementById('task-attempt'),
+            taskMax: document.getElementById('task-max'),
+            taskScore: document.getElementById('task-score'),
+            logOutput: document.getElementById('log-output')
+        };
+
+        function log(message, isHtml = false) {
+            const div = document.createElement('div');
+            div.className = 'mb-2 font-mono';
+            if (isHtml) { div.innerHTML = message; } 
+            else { div.textContent = '> ' + message; }
+            els.logOutput.appendChild(div);
+            els.logOutput.scrollTop = els.logOutput.scrollHeight;
+        }
+
+        async function api(path, method = 'GET', body = null) {
+            const opts = { method, headers: {'Content-Type': 'application/json'} };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(path, opts);
+            if(!res.ok) {
+                let err = await res.text();
+                try { err = JSON.parse(err).detail; } catch (e) {}
+                throw new Error(err);
+            }
+            return res.json();
+        }
+
+        function updateTaskUI(obs) {
+            if(!obs) return;
+            els.noTask.classList.add('hidden');
+            els.taskContainer.classList.remove('hidden');
+            els.btnExecute.disabled = false;
+            
+            els.taskId.textContent = obs.task_id;
+            els.taskLevel.textContent = obs.level;
+            
+            els.taskLevel.className = `text-xs px-2 py-1 rounded text-darkbg font-bold uppercase tracking-wider ${
+                obs.level==='easy'?'bg-success':obs.level==='medium'?'bg-yellow-400':'bg-error'}`;
+            
+            els.taskInstructions.textContent = obs.instructions;
+            els.taskAttempt.textContent = obs.attempt;
+            els.taskMax.textContent = obs.max_attempts;
+            els.taskScore.textContent = obs.best_score_so_far.toFixed(2);
+
+            setTimeout(() => {
+                if(window.editor && (window.editor.getValue().startsWith('--') || window.editor.getValue().trim() === '')) {
+                    window.editor.setValue(obs.query);
+                }
+            }, 50);
+        }
+
+        function renderFeedback(reward, fb, info) {
+            if(!fb) return '';
+            let rubrics = Object.entries(fb.rubric).map(([k, v]) => `
+                <div class="rubric-item">
+                    <span>${v.passed ? '<span class="rubric-pass">✓ [PASS]</span>' : '<span class="rubric-fail">✗ [FAIL]</span>'} <span class="text-white ml-2">${k}</span></span>
+                    <span class="text-gray-400">${Number(v.score).toFixed(2)}/${Number(v.max_score).toFixed(2)} - ${v.detail}</span>
+                </div>
+            `).join('');
+
+            let opti = fb.optimization_notes.length > 0 ? 
+                `<div class="mt-3 text-yellow-400 text-xs bg-yellow-400/10 p-2 rounded border border-yellow-400/20">
+                    <span class="font-bold">⚠️ EXPLAIN QUERY PLAN PENALTIES:</span>
+                    <ul class="list-disc ml-6 mt-1 text-yellow-200 opacity-90">${fb.optimization_notes.map(n=>`<li>${n}</li>`).join('')}</ul>
+                 </div>` : '';
+
+            let hint = fb.hint ? `<div class="text-success mt-2 mb-2 font-bold font-sans tracking-wide">💡 Hint: ${fb.hint}</div>` : '';
+
+            return `
+                <div class="bg-[#11131a] p-4 rounded border border-gray-700 mt-2 text-xs shadow-lg">
+                    <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
+                        <span class="font-bold text-accent text-sm">Reward Signal: ${reward.toFixed(4)} <span class="text-gray-500 font-normal ml-2">(Best trajectory score: ${info.best_score_this_task.toFixed(4)})</span></span>
+                        <span class="px-2 py-1 bg-gray-800 rounded font-mono">${fb.error_type || 'Execution Complete'}</span>
+                    </div>
+                    <div class="text-gray-300 italic mb-2 mt-2 leading-relaxed">${fb.message}</div>
+                    ${hint}
+                    <div class="mt-4"><span class="text-gray-500 uppercase tracking-widest font-bold text-[10px]">Dimensional Rubric</span>${rubrics}</div>
+                    ${opti}
+                </div>
+            `;
+        }
+
+        els.btnReset.addEventListener('click', async () => {
+            try {
+                log('Dispatching POST /reset ...');
+                els.btnExecute.disabled = true;
+                els.logOutput.innerHTML = '';
+                const { observation, info } = await api('/reset', 'POST');
+                log(`<span class="text-success font-bold tracking-wider">>>> ENV_RESET_SUCCESS [Tasks Loaded: ${info.total_tasks}]</span>`, true);
+                if(window.editor) window.editor.setValue('');
+                updateTaskUI(observation);
+            } catch (e) {
+                log(`<span class="text-error font-bold">[!] ERROR: ${e.message}</span>`, true);
+            }
+        });
+
+        els.btnExecute.addEventListener('click', async () => {
+            if(!window.editor) return;
+            const query = window.editor.getValue();
+            try {
+                log(`Dispatching step() via POST /step (payload size: ${query.length} bytes)...`);
+                els.btnExecute.disabled = true;
+                const { observation, reward, done, info, feedback } = await api('/step', 'POST', { query });
+                
+                log(renderFeedback(reward, feedback, info), true);
+
+                if (done) {
+                    log(`<div class="text-accent font-bold mt-6 mb-4 block p-4 border border-accent bg-accent/10 rounded shadow-lg text-center text-lg">
+                            EPISODE TERMINATED
+                            <div class="text-sm font-normal text-gray-300 mt-1">Normalized Benchmark Score: <span class="text-white text-xl">${info.normalized_score.toFixed(4)}</span></div>
+                        </div>`, true);
+                    els.btnExecute.disabled = true;
+                } else {
+                    if (info.advanced_to_next_task) {
+                        log(`<span class="text-accent font-bold text-sm block mt-4 border-l-2 border-accent pl-2 bg-gray-800/50 py-1">>>> PROGRESSION CRITERIA MET. Loading next phase...</span>`, true);
+                        if(observation && window.editor) window.editor.setValue(observation.query);
+                    }
+                    updateTaskUI(observation);
+                }
+            } catch (e) {
+                log(`<span class="text-error flex items-center mt-2 border-l-2 border-error pl-2 font-bold">[!] RUNTIME EXCEPTION: ${e.message}</span>`, true);
+                els.btnExecute.disabled = false;
+            }
+        });
+
+        els.btnDocs.addEventListener('click', () => { window.open('/docs', '_blank'); });
+    </script>
+</body>
+</html>

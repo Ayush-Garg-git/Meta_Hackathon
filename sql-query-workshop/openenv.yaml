@@ -1,0 +1,139 @@
+name: sql-query-workshop
+version: "2.0.0"
+description: >
+  An OpenEnv environment where an AI agent learns to debug and optimize real-world
+  SQL queries against a 5-table e-commerce schema (customers, products, orders,
+  order_items, reviews). Tasks cover syntax repair, join logic, aggregation,
+  correlated subquery elimination, and multi-table report writing. Each task
+  supports multi-step refinement with partial credit and regression penalties.
+
+author: OpenEnv Submission
+license: MIT
+
+interface:
+  reset: POST /reset
+  step:  POST /step
+  state: GET  /state
+
+observation_space:
+  type: object
+  fields:
+    task_id:
+      type: string
+    level:
+      type: string
+      enum: [easy, medium, hard]
+    schema_tables:
+      type: array
+      description: Full schema with sample rows for each of the 5 tables
+    query:
+      type: string
+      description: The broken or inefficient SQL query the agent must fix
+    instructions:
+      type: string
+      description: Detailed natural-language description of all required fixes
+    attempt:
+      type: integer
+      description: Current 1-indexed attempt on this task
+    max_attempts:
+      type: integer
+      description: Maximum attempts allowed per task (3)
+    previous_attempts:
+      type: array
+      description: History of prior attempts including query, score, and structured feedback
+    best_score_so_far:
+      type: float
+      description: Agent's best score on this task across all prior attempts
+
+action_space:
+  type: object
+  fields:
+    query:
+      type: string
+      description: The agent's corrected or rewritten SQL query
+
+tasks:
+  - id: task_01_syntax_fix
+    level: easy
+    description: Fix missing commas and an unquoted string literal in a SELECT query
+    rubric_weights:
+      syntax_valid: 0.25
+      columns_correct: 0.25
+      filter_correct: 0.25
+      result_matches: 0.25
+
+  - id: task_02_join_logic
+    level: medium
+    description: Replace a semantically broken LEFT JOIN with INNER JOIN; add ORDER BY
+    rubric_weights:
+      syntax_valid: 0.15
+      join_type: 0.20
+      join_condition: 0.15
+      filter_correct: 0.15
+      columns_correct: 0.15
+      ordering: 0.10
+      result_matches: 0.10
+
+  - id: task_03_aggregation_fix
+    level: medium
+    description: Add missing GROUP BY and ORDER BY to a multi-join aggregation query
+    rubric_weights:
+      syntax_valid: 0.20
+      group_by_present: 0.20
+      group_by_correct: 0.20
+      having_clause: 0.20
+      ordering: 0.10
+      result_matches: 0.10
+
+  - id: task_04_correlated_subquery
+    level: hard
+    description: Rewrite a correlated subquery as a JOIN + GROUP BY + HAVING
+    rubric_weights:
+      syntax_valid: 0.10
+      no_correlated_subquery: 0.15
+      explicit_joins: 0.15
+      where_filter: 0.10
+      group_by: 0.15
+      having_clause: 0.15
+      alias_present: 0.05
+      result_matches: 0.15
+
+  - id: task_05_multi_table_report
+    level: hard
+    description: Fix implicit joins, missing ON condition, and missing filters in a revenue report
+    rubric_weights:
+      syntax_valid: 0.15
+      no_implicit_join: 0.15
+      all_tables_joined: 0.20
+      where_filter: 0.15
+      group_by_category: 0.15
+      alias_present: 0.05
+      ordering: 0.10
+      result_matches: 0.20
+
+reward:
+  range: [0.0, 1.0]
+  type: continuous_partial_credit
+  description: >
+    Each task scored 0.0–1.0 using a per-task rubric with named dimensions.
+    Rewards are additive (each rubric dimension contributes independently).
+    A small regression penalty is applied when an agent's attempt scores below
+    its own previous best for the same task (discourages random exploration).
+    Query plan analysis via SQLite EXPLAIN QUERY PLAN applies minor penalties for
+    unnecessary full table scans. Episode max reward = 5.0 (one per task).
+
+multi_step:
+  description: >
+    Each task allows up to 3 attempts. The observation includes full attempt
+    history (previous queries, scores, rubric breakdowns) so the agent can
+    iteratively refine. Score is tracked as the running best across attempts.
+  max_attempts_per_task: 3
+  advance_condition: score >= 0.9 OR attempts exhausted
+
+termination:
+  condition: All 5 tasks advanced (solved or exhausted)
+
+docker:
+  base_image: python:3.11-slim
+  port: 7860
+  entrypoint: uvicorn app:app --host 0.0.0.0 --port 7860
