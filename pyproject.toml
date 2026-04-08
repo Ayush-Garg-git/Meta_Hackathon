@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "uvicorn app:app"
+server = "app:serve"
 
 [build-system]
 requires = ["setuptools>=61.0"]

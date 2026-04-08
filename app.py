@@ -52,3 +52,8 @@ def step(action: Action):
 @app.get("/state")
 def state():
     return _env.state()
+
+
+def serve():
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=7860)
