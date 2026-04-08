@@ -4,8 +4,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from env.environment import SQLQueryWorkshop
 from env.models import Action
 from env.tasks import TASKS
