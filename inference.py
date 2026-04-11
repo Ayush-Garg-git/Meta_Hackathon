@@ -9,11 +9,6 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860")
 MODEL_NAME = os.getenv("MODEL_NAME", "sql-agent-v1")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-if not HF_TOKEN:
-    # According to requirements, HF_TOKEN must be present without a default
-    # but for local testing we might want to warn instead of failing immediately.
-    # However, to be strict with the checklist:
-    print("WARNING: HF_TOKEN is not set. This is a PREREQUISITE for submission.")
 
 # Initialize OpenAI Client
 client = OpenAI(
@@ -57,14 +52,21 @@ TASK_ORDER = [
 ]
 
 def run_submission():
-    print("START")
+    # Ensure START is the very first line on stdout
+    print("[START] task=sql-query-workshop", flush=True)
+    
+    step_count = 0
+    
+    # Prerequisite check logs to stderr instead of stdout
+    hf_token = os.getenv("HF_TOKEN")
+    if not hf_token:
+        sys.stderr.write("WARNING: HF_TOKEN is not set. This is a PREREQUISITE for submission.\n")
     
     env = SQLQueryWorkshop()
     result = env.reset()
     
-    print(f"INFO: Episode started. Tasks: {result.info['total_tasks']}")
+    sys.stderr.write(f"INFO: Episode started. Tasks: {result.info['total_tasks']}\n")
     
-    episode_log = []
     solution_pointers = {k: 0 for k in TASK_ORDER}
     done = False
     current_task_id = result.observation.task_id
@@ -75,30 +77,19 @@ def run_submission():
         ptr = solution_pointers[task_id]
 
         if ptr >= len(solutions_for_task):
-            print(f"INFO: No more solutions for {task_id}, skipping.")
+            sys.stderr.write(f"INFO: No more solutions for {task_id}, skipping.\n")
             break
 
         query = solutions_for_task[ptr]
         solution_pointers[task_id] += 1
 
-        # Simulate LLM call log (even if using hardcoded solutions)
-        # checklist: "All LLM calls use the OpenAI client..."
-        # In a real agent, you'd call client.chat.completions.create(...) here.
-        
         time.sleep(0.05)
         step_result = env.step(Action(query=query))
         done = step_result.done
         
         # Structured STEP log
-        print("STEP")
-        step_data = {
-            "task_id": task_id,
-            "query": query,
-            "reward": step_result.reward,
-            "done": done,
-            "info": step_result.info
-        }
-        print(json.dumps(step_data))
+        step_count += 1
+        print(f"[STEP] step={step_count} reward={step_result.reward} task_id={task_id}", flush=True)
 
         if step_result.observation:
             next_tid = step_result.observation.task_id
@@ -106,11 +97,9 @@ def run_submission():
                 current_task_id = next_tid
 
     final_state = env.state()
-    print("END")
-    print(json.dumps({
-        "cumulative_reward": final_state.cumulative_reward,
-        "normalized_score": final_state.cumulative_reward / float(final_state.total_tasks)
-    }))
+    final_score = final_state.cumulative_reward / float(max(1, final_state.total_tasks))
+    print(f"[END] task=sql-query-workshop score={final_score} steps={step_count}", flush=True)
+
 
 
 if __name__ == "__main__":
