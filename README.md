@@ -1,4 +1,15 @@
+---
+title: SQL Query Workshop
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # SQL Query Workshop Benchmark
+
 
 This is a custom OpenEnv benchmark testing how well Large Language Models can debug and optimize SQL queries iteratively.
 
@@ -28,7 +39,7 @@ docker run -p 7860:7860 sql-query-workshop
 
 Local approach:
 pip install -r requirements.txt
-uvicorn app:app --host 0.0.0.0 --port 7860
+uvicorn server.app:app --host 0.0.0.0 --port 7860
 
 Then visit http://127.0.0.1:7860 to test the environment manually or view the API documentation at /docs.
 
