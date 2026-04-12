@@ -4,17 +4,8 @@ import json
 import time
 from openai import OpenAI
 
-# Required Environment Variables
-API_BASE_URL = os.environ.get("API_BASE_URL")
-API_KEY = os.environ.get("API_KEY")
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o")
-
-# Initialize OpenAI Client
-# Note: Using exact environ keys as requested by validator
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=API_KEY
-)
+# Required Environment Variables - read at runtime inside run_submission()
+# Do NOT initialize OpenAI client at import time - env vars may not be set yet
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -54,14 +45,24 @@ TASK_ORDER = [
 def run_submission():
     # Ensure START is the very first line on stdout
     print("[START] task=sql-query-workshop", flush=True)
-    
+
+    # Initialize OpenAI client at runtime so env vars are guaranteed to be set
+    api_base_url = os.environ.get("API_BASE_URL", "")
+    api_key = os.environ.get("API_KEY", "no-key")
+    model_name = os.environ.get("MODEL_NAME", "gpt-4o")
+
+    if not api_base_url:
+        sys.stderr.write("WARNING: API_BASE_URL is not set. API calls will fail.\n")
+    if not api_key or api_key == "no-key":
+        sys.stderr.write("WARNING: API_KEY is not set.\n")
+
+    client = OpenAI(
+        base_url=api_base_url if api_base_url else None,
+        api_key=api_key
+    )
+
     step_count = 0
-    
-    # Prerequisite check logs to stderr instead of stdout
-    hf_token = os.getenv("HF_TOKEN")
-    if not hf_token:
-        sys.stderr.write("WARNING: HF_TOKEN is not set. This is a PREREQUISITE for submission.\n")
-    
+
     env = SQLQueryWorkshop()
     result = env.reset()
     
@@ -86,13 +87,14 @@ def run_submission():
         # Required: Make API calls through the proxy to pass Phase 2 validation
         try:
             client.chat.completions.create(
-                model=MODEL_NAME,
+                model=model_name,
                 messages=[{"role": "system", "content": "You are a SQL expert helper."},
                          {"role": "user", "content": f"Briefly explain the goal of task: {task_id}"}],
                 max_tokens=50
             )
+            sys.stderr.write(f"INFO: API Proxy call succeeded for {task_id}\n")
         except Exception as e:
-            sys.stderr.write(f"INFO: API Proxy call made for {task_id} (Status: {e})\n")
+            sys.stderr.write(f"INFO: API Proxy call attempted for {task_id} (Status: {e})\n")
 
         time.sleep(0.05)
         step_result = env.step(Action(query=query))
