@@ -1,5 +1,9 @@
 import sys
 import os
+
+# Inject root directory into sys.path to allow execution from within the server/ folder
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -59,8 +63,11 @@ def state():
 
 def main():
     import uvicorn
+    # Add descriptive log as per user suggestion
+    print("Starting SQL Query Workshop Server on http://0.0.0.0:7860")
     uvicorn.run(app, host="0.0.0.0", port=7860)
 
 
 if __name__ == "__main__":
     main()
+
