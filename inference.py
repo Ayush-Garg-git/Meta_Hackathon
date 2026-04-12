@@ -47,14 +47,14 @@ def run_submission():
     print("[START] task=sql-query-workshop", flush=True)
 
     # Initialize OpenAI client at runtime so env vars are guaranteed to be set
-    api_base_url = os.environ.get("API_BASE_URL", "")
-    api_key = os.environ.get("API_KEY", "no-key")
+    api_base_url = os.environ.get("API_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "")
+    api_key = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN") or "no-key"
     model_name = os.environ.get("MODEL_NAME", "gpt-4o")
 
     if not api_base_url:
         sys.stderr.write("WARNING: API_BASE_URL is not set. API calls will fail.\n")
     if not api_key or api_key == "no-key":
-        sys.stderr.write("WARNING: API_KEY is not set.\n")
+        sys.stderr.write("WARNING: API_KEY/HF_TOKEN is not set.\n")
 
     client = OpenAI(
         base_url=api_base_url if api_base_url else None,
